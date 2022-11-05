@@ -1,0 +1,19 @@
+/*
+ * buzzer.h
+ *
+ *  Created on: Nov 1, 2022
+ *      Author: Ahmed
+ */
+
+#ifndef BUZZER_H_
+#define BUZZER_H_
+
+#include "std_types.h"
+
+//BUZZER PIN
+#define BUZZER_PORT_ID
+#define BUZZER_PIN_ID
+
+
+
+#endif /* BUZZER_H_ */

@@ -1,0 +1,373 @@
+/*
+ * hmiMain.c
+ *
+ *  Created on: Nov 1, 2022
+ *      Author: Ahmed
+ */
+
+#include "hmiMain.h"
+#include "lcd.h"
+#include "keypad.h"
+#include "uart.h"
+#include <util/delay.h> /* For the delay functions */
+#include "timer1.h"
+#include <avr/interrupt.h>
+
+/*******************************************************************************
+ *                          GLOBAL VARIABLES                                   *
+ *******************************************************************************/
+/*Timer1 general ticks*/
+volatile uint8 ticks=0;
+/*UART data*/
+uint8 uart_data;
+/*key pressed*/
+uint8 key;
+/*PASSWORDS*/
+uint8 PASS[PASS_LENGTH+2];
+uint8 PASS_CONF[PASS_LENGTH+2];
+
+/*BOOL VARIABLE IS TRUE ONLY IF 2 PASS ARE MATCHED RECEIVED FROM CONTROL ECU*/
+uint8 is_matched=0;
+
+/*ITTERATOR*/
+uint8 i=0;
+
+/*******************************************************************************
+ *                          FUNCTIONS  DEFINITIONS                             *
+ *******************************************************************************/
+void TIMER1_CallBack(void)
+{
+	++ticks;
+}
+
+/*send entered password to be checked on control side*/
+void PASS_CHECK(void)
+{
+	/*send pass to be checked by uart*/
+	i=0;
+	while(UART_recieveByte() != CON_READY);
+	while(i<PASS_LENGTH)
+	{
+		UART_sendByte(PASS[i]);
+		_delay_ms(UART_DELAY);
+		++i;
+	}
+}
+
+void CREATE_PASS(void)
+{
+	is_matched=0;
+	while(is_matched==0)
+	{
+		/*=======================enter first password=================================*/
+		i=0;
+		key=0;
+		/*Clear screen*/
+		LCD_clearScreen();
+		/*show enter mess on lcd*/
+		LCD_displayString("PLZ ENTER PASS:");
+		LCD_moveCursor(1, 0);
+		while(i<PASS_LENGTH)
+		{
+			key=KEYPAD_getPressedKey();
+			if(key<=9 && key >=0)
+			{
+				LCD_displayCharacter('*');
+				/*save password in pass1*/
+				PASS[i]=key;
+				_delay_ms(KEYPAD_DELAY);
+				++i;
+			}
+		}
+		/*To be a null terminator at end of string to send by Uart*/
+		PASS[i]='#';
+		/*null terminator to make Uart_sendstring stop at '#' */
+		PASS[i+1]='\0';
+		while(KEYPAD_getPressedKey()!=ENTER_KEY);
+
+		/*=======================enter confirmation of password=================================*/
+		LCD_clearScreen();
+		/*show enter mess on lcd*/
+		LCD_displayString("PLZ RE-ENTER SAM");
+		LCD_moveCursor(1, 0);
+		LCD_displayString("E PASS:");
+		LCD_moveCursor(1, 8);
+		i=0;
+		key=0;
+		while(i<PASS_LENGTH)
+		{
+			key=KEYPAD_getPressedKey();
+			if(key<=9 && key >=0)
+			{
+				LCD_displayCharacter('*');
+				/*save password in pass2*/
+				PASS_CONF[i]=key;
+				_delay_ms(KEYPAD_DELAY);
+				++i;
+			}
+		}
+		/*To be a null terminator at end of string to send by Uart*/
+		PASS_CONF[i]='#';
+		/*null terminator to make Uart_sendstring stop at '#' */
+		PASS_CONF[i+1]='\0';
+		while(KEYPAD_getPressedKey()!=ENTER_KEY);
+		LCD_clearScreen();
+
+		/*=======================send password1 by Uart=================================*/
+		while(UART_recieveByte() != CON_READY);
+		i=0;
+		while(i<PASS_LENGTH)
+		{
+			UART_sendByte(PASS[i]);
+			_delay_ms(UART_DELAY);
+			++i;
+		}
+
+		/*=======================send confirmation password by Uart=================================*/
+		i=0;
+		while(UART_recieveByte() != CON_READY);
+		while(i<PASS_LENGTH)
+		{
+			UART_sendByte(PASS_CONF[i]);
+			_delay_ms(UART_DELAY);
+			++i;
+		}
+
+		/*=======================receive if 2 pass are matched by Uart=================================*/
+		UART_sendByte(HMI_READY);
+		is_matched=UART_recieveByte();
+		_delay_ms(UART_DELAY);
+
+		if(is_matched==0)
+		{
+			LCD_clearScreen();
+			LCD_displayString("..UNMATCHED..");
+			_delay_ms(1000);
+		}
+	}
+
+	LCD_clearScreen();
+	LCD_displayString("..CONFIRMED..");
+	_delay_ms(1000);
+}
+
+void CHANGE_PASS(void)
+{
+	is_matched=0;
+	uint8 trial=0;
+
+	while(is_matched==0 && trial<3)
+	{
+		/*WARNING MESS*/
+		if(trial==2)
+		{
+			LCD_clearScreen();
+			LCD_displayString("..LAST TRIAL..");
+			_delay_ms(1000);
+
+		}
+
+		/*READ ENTERED PASS FROM USER*/
+		LCD_clearScreen();
+		LCD_displayString("PLZ ENTER PASS:");
+
+		LCD_moveCursor(1, 0);
+		i=0;
+		key=0;
+		while(i<PASS_LENGTH)
+		{
+			key=KEYPAD_getPressedKey();
+			if(key<=9 && key >=0)
+			{
+				LCD_displayCharacter('*');
+				LCD_integerToString(key);
+				/*save password in pass1*/
+				PASS[i]=key;
+				_delay_ms(KEYPAD_DELAY);
+				++i;
+			}
+		}
+		while(KEYPAD_getPressedKey()!=ENTER_KEY);
+
+		/*CHECK IF ENTERED PASS IS RIGHT SO OPEN THE DOOR OR NOT*/
+		PASS_CHECK();
+
+		/*OPEN DOOR IF VALID PASS IS ENTERED*/
+
+		/*RECEIVE IF VALID BY UART*/
+		UART_sendByte(HMI_READY);
+		is_matched=UART_recieveByte();
+		_delay_ms(UART_DELAY);
+
+		/*increment trial-error*/
+		++trial;
+
+		if(is_matched==0)
+		{
+			LCD_clearScreen();
+			LCD_displayString("..UNMATCHED..");
+			_delay_ms(1000);
+		}
+	}
+
+	if(is_matched==1)
+	{
+		/*CREATE NEW PASS*/
+		CREATE_PASS();
+	}
+	else{
+		/*ACTIVATE BUZZER*/
+		ticks=0;
+		LCD_clearScreen();
+		LCD_displayString("..ERROR..");
+
+		/*HOLD THE SYSTEM UNTIL BUZZER STOPS*/
+		while(ticks<BUZZER_ACTIVE);
+	}
+}
+
+void OPEN_DOOR_REQ(void)
+{
+	is_matched=0;
+	uint8 trial=0;
+
+	while(is_matched==0 && trial<3)
+	{
+		/*WARNING MESS*/
+		if(trial==2)
+		{
+			LCD_clearScreen();
+			LCD_displayString("..LAST TRIAL..");
+			_delay_ms(1000);
+
+		}
+
+		/*READ ENTERED PASS FROM USER*/
+		LCD_clearScreen();
+		LCD_displayString("PLZ ENTER PASS:");
+
+		LCD_moveCursor(1, 0);
+		i=0;
+		key=0;
+		while(i<PASS_LENGTH)
+		{
+			key=KEYPAD_getPressedKey();
+			if(key<=9 && key >=0)
+			{
+				//			LCD_displayCharacter('*');
+				LCD_integerToString(key);
+				/*save password in pass1*/
+				PASS[i]=key;
+				_delay_ms(KEYPAD_DELAY);
+				++i;
+			}
+		}
+		while(KEYPAD_getPressedKey()!=ENTER_KEY);
+
+		/*CHECK IF ENTERED PASS IS RIGHT SO OPEN THE DOOR OR NOT*/
+		PASS_CHECK();
+
+		/*OPEN DOOR IF VALID PASS IS ENTERED*/
+
+		/*RECEIVE IF VALID BY UART*/
+		UART_sendByte(HMI_READY);
+		is_matched=UART_recieveByte();
+		_delay_ms(UART_DELAY);
+
+		/*increment trial-error*/
+		++trial;
+
+		if(is_matched==0)
+		{
+			LCD_clearScreen();
+			LCD_displayString("..UNMATCHED..");
+			_delay_ms(1000);
+		}
+	}
+
+	/*OPENING DOOR HOLD*/
+	if(is_matched==1)
+	{
+		LCD_clearScreen();
+		ticks=0;
+		LCD_displayString("OPENING THE DOOR");
+		while(ticks<DOOR_OPEN);   /*ROTATE MOTOR TO OPEN THE DOOR FOR 15 SEC*/
+		LCD_clearScreen();
+		LCD_displayString("DOOR IS OPENED");
+		while(ticks<(DOOR_OPEN+DOOR_HOLD));   /*HOLD FOR 3 SEC TO LET USER ENTER FROM DOOR*/
+		LCD_clearScreen();
+		LCD_displayString("CLOSING THE DOOR");
+		while(ticks<(DOOR_OPEN+DOOR_HOLD+DOOR_CLOSE)); /*ROTATE MOTOR TO CLOSE THE DOOR FOR 15 SEC*/
+	}
+	else{
+		/*ACTIVATE BUZZER*/
+		ticks=0;
+		LCD_clearScreen();
+		LCD_displayString("..ERROR..");
+
+		/*HOLD THE SYSTEM UNTIL BUZZER STOPS*/
+		while(ticks<BUZZER_ACTIVE);
+	}
+}
+
+void MAIN_OPT(void)
+{
+	LCD_clearScreen();
+	LCD_displayString("+: OPEN DOOR");
+	LCD_moveCursor(1, 0);
+	LCD_displayString("-: CHANGE PASS");
+	key=KEYPAD_getPressedKey();
+	_delay_ms(KEYPAD_DELAY);
+	while(key!='+' && key!='-')
+	{
+		key=KEYPAD_getPressedKey();
+		_delay_ms(KEYPAD_DELAY);
+	}
+
+	/*send selected option by uart*/
+	while(UART_recieveByte() != CON_READY);
+	UART_sendByte(key);
+	_delay_ms(UART_DELAY);
+
+	if(key=='+')
+	{
+		/*OPEN DOOR FUNC*/
+		OPEN_DOOR_REQ();
+	}
+	else{
+		/*CHANGE PASS FUNC*/
+		CHANGE_PASS();
+	}
+}
+
+
+/********************************************************************************************************************************************/
+
+int main(void)
+{
+	/* ======================== Variables ============================== */
+
+	/*uart config. structure*/
+	UART_CONFIGURATION uart_Conf={DISABLE,ONE,EIGHT,9600};
+
+	/*timer! config. structure*/
+	Timer1_ConfigType timer1_conf={0,23437,CLK_1024,COMPARE};
+
+	/* ======================== SYSTEM Initialization ============================== */
+	//ACTIVATE (I-BIT) FOR INTERRUPTS
+	sei();
+
+	UART_init(&uart_Conf);
+	Timer1_setCallBack(TIMER1_CallBack); /*SET CALL BACK FUNCTION FOR TIMER*/
+	Timer1_init(&timer1_conf);
+	LCD_init();
+
+	/* ======================== Program ============================== */
+
+	CREATE_PASS();
+
+	for(;;)
+	{
+		MAIN_OPT();
+	}
+}

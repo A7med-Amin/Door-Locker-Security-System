@@ -1,0 +1,54 @@
+/*
+ * hmiMain.h
+ *
+ *  Created on: Nov 5, 2022
+ *      Author: Ahmed
+ */
+
+#ifndef HMIMAIN_H_
+#define HMIMAIN_H_
+
+#include "../HAL./lcd.h"
+#include "../HAL./keypad.h"
+#include "../MCAL./uart.h"
+#include <util/delay.h> /* For the delay functions */
+#include "../MCAL./timer1.h"
+#include <avr/interrupt.h>
+
+
+
+/*******************************************************************************
+ *                          DEFINITIONS                                        *
+ *******************************************************************************/
+/*ACKNOWLEDGE FOR BOTH ECUS*/
+#define HMI_READY 0x10
+#define CON_READY 0x10
+
+#define DOOR_HOLD 1
+#define DOOR_OPEN 5
+#define DOOR_CLOSE 5
+#define BUZZER_ACTIVE 20
+#define PASS_LENGTH 5
+#define ENTER_KEY 13
+#define KEYPAD_DELAY 500
+#define UART_DELAY 50
+
+
+
+/*******************************************************************************
+ *                          FUNCTIONS  DECLARATION                             *
+ *******************************************************************************/
+void TIMER1_CallBack(void);
+
+void PASS_CHECK(void);
+
+void CREATE_PASS(void);
+
+void CHANGE_PASS(void);
+
+void OPEN_DOOR_REQ(void);
+
+void MAIN_OPT(void);
+
+
+#endif /* HMIMAIN_H_ */

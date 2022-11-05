@@ -1,0 +1,23 @@
+/*
+ * external_eeprom.c
+ *
+ *  Created on: Nov 4, 2022
+ *      Author: Ahmed
+ */
+#include "external_eeprom.h"
+#include "twi.h"
+
+/*******************************************************************************
+ *                      Functions DEFINITIONS                                  *
+ *******************************************************************************/
+
+uint8 EEPROM_writeByte(uint16 u16addr,uint8 u8data)
+{
+
+}
+
+uint8 EEPROM_readByte(uint16 u16addr,uint8 *u8data)
+{
+
+}
+

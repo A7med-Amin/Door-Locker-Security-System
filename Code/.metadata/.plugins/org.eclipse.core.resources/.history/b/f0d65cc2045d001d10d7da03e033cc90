@@ -1,0 +1,95 @@
+/*
+ * timer1.c
+ *
+ *  Created on: Nov 3, 2022
+ *      Author: Ahmed
+ */
+
+#include"timer1.h"
+#include<avr/io.h>
+#include<avr/interrupt.h>
+#include "common_macros.h" /* To use the macros like SET_BIT */
+#include "std_types.h"
+
+
+/*******************************************************************************
+ *                           Global Variables                                  *
+ *******************************************************************************/
+
+/* Global variables to hold the address of the call back function in the application */
+static volatile void (*g_callBackPtr)(void) = NULL_PTR;
+
+/*******************************************************************************
+ *                      Functions Definitions                                  *
+ *******************************************************************************/
+/*
+ * COMPARE MODE ISR
+ */
+ISR(TIMER1_COMPA_vect)
+{
+	/*THIS FUNCTION CALL INCREASE ALL TICKS OF THE PROGRAM*/
+	if(g_callBackPtr != NULL_PTR){
+		(*g_callBackPtr)();
+	}
+}
+
+/*
+ * NORMAL MODE FOR TIMER1
+ */
+ISR(TIMER1_OVF_vect)
+{
+	/*TO MAKE TIMER START FROM THIS VALUE EACH ISR*/
+
+	/*THIS FUNCTION CALL INCREASE ALL TICKS OF THE PROGRAM*/
+	(*g_callBackPtr)();
+
+}
+
+/*
+ * CONFIG. FUNCTION FOR TIMER1
+ */
+void Timer1_init(const Timer1_ConfigType * Config_Ptr)
+{
+	//INITIAL VALUE
+	TCNT1=Config_Ptr->initial_value;
+
+	if(Config_Ptr->mode==COMPARE)
+	{
+		//PUT COMPARE VALUE TO BE 7812
+		OCR1A=Config_Ptr->compare_value;
+	}
+
+	//ENABLE TIMER 1 COMPARE-A INTERRUPT
+	TIMSK |= (1<<OCIE1A);
+
+	//NON PWM SIGNAL
+	TCCR1A = (1 << FOC1A) | ((TCCR1A & 0xFC) | (Config_Ptr->mode & 0x03));
+
+	/*
+	 * COMPARE: WGM12=1 / NORMAL: WGM12=0
+	 * FIRST 3 BITS IS FOR PRESCALER
+	 * */
+	TCCR1B = ((TCCR1B & 0xF8) | (Config_Ptr->prescaler & 0x07)) | ((TCCR1B & 0xE7) |
+			((Config_Ptr->mode & 0x0C)<<1));
+}
+
+/*
+ * SET CALL BACK FUNCTION FOR TIMER1
+ */
+void Timer1_setCallBack(void(*a_ptr)(void))
+{
+	/* Save the address of the Call back function in a global variable */
+	g_callBackPtr = a_ptr;
+}
+
+/*
+ * DECTIVATE TIMER1 FUNCTION
+ */
+void Timer1_deInit(void)
+{
+	//DISBALE TIMER CLOCK IN ATMEGA 32
+	TCCR1A=0;
+	TCCR1B=0;
+	TIMSK &= ~(1 << OCIE1A);
+}
+

@@ -1,0 +1,98 @@
+/*
+ * timer1.c
+ *
+ *  Created on: Nov 3, 2022
+ *      Author: Ahmed
+ */
+
+#include"timer1.h"
+#include<avr/io.h>
+#include<avr/interrupt.h>
+#include "common_macros.h" /* To use the macros like SET_BIT */
+#include "std_types.h"
+
+
+/*******************************************************************************
+ *                           Global Variables                                  *
+ *******************************************************************************/
+
+/* Global variables to hold the address of the call back function in the application */
+static volatile void (*g_callBackPtr)(void) = NULL_PTR;
+
+/*******************************************************************************
+ *                      Functions Definitions                                  *
+ *******************************************************************************/
+/*
+ * COMPARE MODE ISR
+ */
+ISR(TIMER1_COMPA_vect)
+{
+	/*THIS FUNCTION CALL INCREASE ALL TICKS OF THE PROGRAM*/
+	if(g_callBackPtr != NULL_PTR){
+		(*g_callBackPtr)();
+	}
+}
+
+/*
+ * NORMAL MODE FOR TIMER1
+ */
+ISR(TIMER1_OVF_vect)
+{
+	/*TO MAKE TIMER START FROM THIS VALUE EACH ISR*/
+
+	/*THIS FUNCTION CALL INCREASE ALL TICKS OF THE PROGRAM*/
+	(*g_callBackPtr)();
+
+}
+
+/*
+ * CONFIG. FUNCTION FOR TIMER1
+ */
+void Timer1_init(const Timer1_ConfigType * Config_ptr)
+{
+	//ACTIVATE (I-BIT) FOR INTERRUPTS
+	sei();
+
+	/* Initialize Timer1 With value that will start count according to this value*/
+	TCNT1 = Config_ptr->Initial_value;
+
+	/* Set Compare value that Timer will reach to it then, it backs count from 0*/
+	OCR1A = Config_ptr->Compare_value;
+
+	/* Enable Timer1 Interrupt*/
+	TIMSK |= (1 << OCIE1A);
+
+	/****************************************************************************
+	 * FOC1A : It will be set when Timer1 Operate in non PWM Mode
+	 * Set First 2-bits From Mode Member to Specify which Mode Timer1 Will Operate
+	****************************************************************************/
+	TCCR1A = (1 << FOC1A) | ((TCCR1A & 0xFC) | (Config_ptr->Mode & 0x03));
+
+	/****************************************************************************
+	 * Set Pre-scaler value in the first 3-bits in TCCR1B Register that will specify which frequency Timer1 will Operate
+	 * Set Last 2-bits From Mode Member to Specify Which Mode Timer1 Will Operate
+	****************************************************************************/
+	TCCR1B = ((TCCR1B & 0xF8) | (Config_ptr->Prescaler & 0x07)) | ((TCCR1B & 0xE7) | ((Config_ptr->Mode & 0x0C)<<1));
+
+}
+
+/*
+ * SET CALL BACK FUNCTION FOR TIMER1
+ */
+void Timer1_setCallBack(void(*a_ptr)(void))
+{
+	/* Save the address of the Call back function in a global variable */
+	g_callBackPtr = a_ptr;
+}
+
+/*
+ * DECTIVATE TIMER1 FUNCTION
+ */
+void Timer1_deInit(void)
+{
+	//DISBALE TIMER CLOCK IN ATMEGA 32
+	TCCR1A=0;
+	TCCR1B=0;
+	TIMSK &= ~(1 << OCIE1A);
+}
+

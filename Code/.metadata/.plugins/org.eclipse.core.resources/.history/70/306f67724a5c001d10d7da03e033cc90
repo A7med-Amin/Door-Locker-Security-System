@@ -1,0 +1,16 @@
+/*
+ * external_eeprom.h
+ *
+ *  Created on: Nov 4, 2022
+ *      Author: Ahmed
+ */
+
+#ifndef EXTERNAL_EEPROM_H_
+#define EXTERNAL_EEPROM_H_
+
+#include "twi.h"
+#include "std_types.h"
+
+
+
+#endif /* EXTERNAL_EEPROM_H_ */

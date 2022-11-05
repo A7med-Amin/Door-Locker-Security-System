@@ -1,0 +1,354 @@
+/*
+ * hmiMain.c
+ *
+ *  Created on: Nov 1, 2022
+ *      Author: Ahmed
+ */
+
+#include "lcd.h"
+#include "keypad.h"
+#include "uart.h"
+#include <util/delay.h> /* For the delay functions */
+#include "timer1.h"
+#include <avr/interrupt.h>
+
+/*******************************************************************************
+ *                          DEFINITIONS                                        *
+ *******************************************************************************/
+/*ACKNOWLEDGE FOR BOTH ECUS*/
+#define HMI_READY 0x10
+#define CON_READY 0x10
+
+#define DOOR_HOLD 1
+#define DOOR_OPEN 5
+#define DOOR_CLOSE 5
+#define BUZZER_ACTIVE 20
+#define PASS_LENGTH 5
+#define ENTER_KEY 13
+#define KEYPAD_DELAY 500
+#define UART_DELAY 50
+
+
+
+
+/*******************************************************************************
+ *                          GLOBAL VARIABLES                                   *
+ *******************************************************************************/
+/*Timer1 general ticks*/
+volatile uint8 ticks=0;
+/*UART data*/
+uint8 uart_data;
+/*key pressed*/
+uint8 key;
+/*PASSWORDS*/
+uint8 PASS[PASS_LENGTH+2];
+uint8 PASS_CONF[PASS_LENGTH+2];
+
+/*BOOL VARIABLE IS TRUE ONLY IF 2 PASS ARE MATCHED RECEIVED FROM CONTROL ECU*/
+uint8 is_matched=0;
+
+/*ITTERATOR*/
+uint8 i=0;
+
+/*******************************************************************************
+ *                          FUNCTIONS                                        *
+ *******************************************************************************/
+void TIMER1_CallBack(void)
+{
+	++ticks;
+}
+
+void CHANGE_PASS(void)
+{
+
+}
+
+void OPEN_DOOR_REQ(void)
+{
+	is_matched=0;
+	uint8 trial_limit=0;
+
+	while(is_matched==0)   /*LOOP UNTIL PASS IS MATCHED OR TRIAL ERROR EXCEEDED LIMIT*/
+	{
+
+
+/*********************************************** TO BE IMPLEMENTED **********************************************/
+
+		/*open door fnuc*/
+		LCD_clearScreen();
+		LCD_displayString("PLZ ENTER PASS:");
+
+		LCD_moveCursor(1, 0);
+		i=0;
+		key=0;
+		while(i<PASS_LENGTH)
+		{
+			key=KEYPAD_getPressedKey();
+			if(key<=9 && key >=0)
+			{
+				//			LCD_displayCharacter('*');
+				LCD_integerToString(key);
+				/*save password in pass2*/
+				PASS[i]=key;
+				_delay_ms(KEYPAD_DELAY);
+				++i;
+			}
+		}
+
+		while(KEYPAD_getPressedKey()!=ENTER_KEY);
+
+		/*send pass by uart*/
+		i=0;
+		while(UART_recieveByte() != CON_READY);
+		while(i<PASS_LENGTH)
+		{
+			UART_sendByte(PASS[i]);
+			_delay_ms(UART_DELAY);
+			++i;
+		}
+
+
+
+
+	}
+}
+
+void MAIN_OPT(void)
+{
+	LCD_clearScreen();
+	LCD_displayString("+: OPEN DOOR");
+	LCD_moveCursor(1, 0);
+	LCD_displayString("-: CHANGE PASS");
+	key=KEYPAD_getPressedKey();
+	while(key!='+' || key!='-')
+	{
+		key=KEYPAD_getPressedKey();
+	}
+
+	/*send selected option by uart*/
+	while(UART_recieveByte() != CON_READY);
+	UART_sendByte(key);
+	_delay_ms(UART_DELAY);
+
+	if(key=='+')
+	{
+		/*OPEN DOOR FUNC*/
+		OPEN_DOOR_REQ();
+	}
+	else{
+		/*CHANGE PASS FUNC*/
+		CHANGE_PASS();
+	}
+}
+
+
+void CREATE_PASS(void)
+{
+	is_matched=0;
+	while(is_matched==0)
+	{
+		/*=======================enter first password=================================*/
+		i=0;
+		key=0;
+		/*Clear screen*/
+		LCD_clearScreen();
+		/*show enter mess on lcd*/
+		LCD_displayString("PLZ ENTER PASS:");
+		LCD_moveCursor(1, 0);
+		while(i<PASS_LENGTH)
+		{
+			key=KEYPAD_getPressedKey();
+			if(key<=9 && key >=0)
+			{
+				//			LCD_displayCharacter('*');
+				LCD_integerToString(key);
+				/*save password in pass1*/
+				PASS[i]=key;
+				_delay_ms(KEYPAD_DELAY);
+				++i;
+			}
+		}
+		/*To be a null terminator at end of string to send by Uart*/
+		PASS[i]='#';
+		/*null terminator to make Uart_sendstring stop at '#' */
+		PASS[i+1]='\0';
+		while(KEYPAD_getPressedKey()!=ENTER_KEY);
+
+		/*=======================enter confirmation of password=================================*/
+		LCD_clearScreen();
+		/*show enter mess on lcd*/
+		LCD_displayString("PLZ RE-ENTER SAM");
+		LCD_moveCursor(1, 0);
+		LCD_displayString("E PASS:");
+		LCD_moveCursor(1, 8);
+		i=0;
+		key=0;
+		while(i<PASS_LENGTH)
+		{
+			key=KEYPAD_getPressedKey();
+			if(key<=9 && key >=0)
+			{
+				//			LCD_displayCharacter('*');
+				LCD_integerToString(key);
+				/*save password in pass2*/
+				PASS_CONF[i]=key;
+				_delay_ms(KEYPAD_DELAY);
+				++i;
+			}
+		}
+		/*To be a null terminator at end of string to send by Uart*/
+		PASS_CONF[i]='#';
+		/*null terminator to make Uart_sendstring stop at '#' */
+		PASS_CONF[i+1]='\0';
+		while(KEYPAD_getPressedKey()!=ENTER_KEY);
+		LCD_clearScreen();
+
+		/*=======================send password1 by Uart=================================*/
+//		while(UART_recieveByte() != CON_READY);
+//		UART_sendString(PASS);
+//		_delay_ms(UART_DELAY);
+
+		while(UART_recieveByte() != CON_READY);
+		i=0;
+		while(i<PASS_LENGTH)
+		{
+			UART_sendByte(PASS[i]);
+			_delay_ms(UART_DELAY);
+			++i;
+		}
+
+		/*=======================send confirmation password by Uart=================================*/
+//		while(UART_recieveByte() != CON_READY);
+//		UART_sendString(PASS_CONF);
+//		_delay_ms(UART_DELAY);
+
+		i=0;
+		while(UART_recieveByte() != CON_READY);
+		while(i<PASS_LENGTH)
+		{
+			UART_sendByte(PASS_CONF[i]);
+			_delay_ms(UART_DELAY);
+			++i;
+		}
+
+		/*=======================receive if 2 pass are matched by Uart=================================*/
+		UART_sendByte(HMI_READY);
+		is_matched=UART_recieveByte();
+		_delay_ms(UART_DELAY);
+
+		if(is_matched==0)
+		{
+			LCD_clearScreen();
+			LCD_displayString("..UNMATCHED..");
+			_delay_ms(1000);
+		}
+	}
+
+	LCD_clearScreen();
+	LCD_displayString("..CONFIRMED..");
+	_delay_ms(1000);
+}
+
+
+
+/********************************************************************************************************************************************/
+
+int main(void)
+{
+	/* ======================== Variables ============================== */
+
+	/*uart config. structure*/
+	UART_CONFIGURATION uart_Conf={DISABLE,ONE,EIGHT,9600};
+
+	/*timer! config. structure*/
+	Timer1_ConfigType timer1_conf={0,7812,CLK_1024,COMPARE};
+
+	/* ======================== Initialization ============================== */
+	//ACTIVATE (I-BIT) FOR INTERRUPTS
+	sei();
+
+	UART_init(&uart_Conf);
+	Timer1_setCallBack(TIMER1_CallBack); /*SET CALL BACK FUNCTION FOR TIMER*/
+	Timer1_init(&timer1_conf);
+	LCD_init();
+
+	/* ======================== Program ============================== */
+
+	CREATE_PASS();
+
+	for(;;)
+	{
+		MAIN_OPT();
+	}
+
+
+
+
+
+
+	/********************************************************************************************************************************************/
+
+	//	for(;;)
+	//	{
+	//		/* Get the pressed key number, if any switch pressed for more than 500 ms it will considered more than one press */
+	//		key = KEYPAD_getPressedKey();
+	//
+	//		if((key <= 9) && (key >= 0))
+	//		{
+	//			LCD_integerToString(key);   /* display the pressed keypad switch */
+	//		}
+	//		else
+	//		{
+	//			LCD_displayCharacter(key); /* display the pressed keypad switch */
+	//		}
+	//
+	//		_delay_ms(500); /* Press time */
+	//	}
+
+
+	//UART TEST with keypad
+
+	//	key = KEYPAD_getPressedKey();
+	//	while(UART_recieveByte() != CON_READY){}
+	//	UART_sendByte(key);
+	//	UART_sendByte(HMI_READY);
+	//	data=UART_recieveByte();
+	//	LCD_integerToString(data);
+	//
+	//	uint8 str[20];
+
+
+	/*
+	 * Timer1 TEST
+	 * */
+
+	//	uint8 tick;
+	//
+	//	UART_sendByte(HMI_READY);
+	//	tick=UART_recieveByte();
+	//	LCD_integerToString(tick);
+	//
+	//	_delay_ms(50);
+	//
+	//	UART_sendByte(HMI_READY);
+	//	tick=UART_recieveByte();
+	//	LCD_integerToString(tick);
+	//
+	//	_delay_ms(50);
+	//
+	//	UART_sendByte(HMI_READY);
+	//	tick=UART_recieveByte();
+	//	LCD_integerToString(tick);
+	//
+	//
+	//	_delay_ms(50);
+	//
+	//	UART_sendByte(HMI_READY);
+	//	tick=UART_recieveByte();
+	//	LCD_integerToString(tick);
+
+	/* Display the received string on the LCD display */
+	//	LCD_displayString(str);
+
+
+}

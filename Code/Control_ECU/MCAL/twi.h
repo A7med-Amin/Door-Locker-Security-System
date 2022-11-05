@@ -1,0 +1,52 @@
+/*
+ * twi.h
+ *
+ *  Created on: Nov 4, 2022
+ *      Author: Ahmed
+ */
+
+#ifndef TWI_H_
+#define TWI_H_
+
+#include "../CONFIG./std_types.h"
+
+/*******************************************************************************
+ *                          DEFINITIONS                                        *
+ *******************************************************************************/
+/* I2C Status Bits in the TWSR Register */
+#define TWI_START         0x08 /* start has been sent */
+#define TWI_REP_START     0x10 /* repeated start */
+#define TWI_MT_SLA_W_ACK  0x18 /* Master transmit ( slave address + Write request ) to slave + ACK received from slave. */
+#define TWI_MT_SLA_R_ACK  0x40 /* Master transmit ( slave address + Read request ) to slave + ACK received from slave. */
+#define TWI_MT_DATA_ACK   0x28 /* Master transmit data and ACK has been received from Slave. */
+#define TWI_MR_DATA_ACK   0x50 /* Master received data and send ACK to slave. */
+#define TWI_MR_DATA_NACK  0x58 /* Master received data but doesn't send ACK to slave. */
+
+
+/*******************************************************************************
+ *                      user defined data-types                                *
+ *******************************************************************************/
+/*PRESCALER FOR BAUD-RATE*/
+typedef enum{
+	F_1,F_4,F_16,F_64
+}TWI_BaudRate_Prescaler;
+
+/*CONFIGURATOIN STRUCTURE*/
+typedef struct{
+uint8 slave_address;
+uint8 bit_rate;  /*value of TWBR REG*/
+TWI_BaudRate_Prescaler prescaler; /*value of TWPS BITS IN TWSR REG*/
+}TWI_ConfigType;
+
+/*******************************************************************************
+ *                      Functions Prototypes                                   *
+ *******************************************************************************/
+void TWI_init(TWI_ConfigType* config_ptr);
+void TWI_start(void);
+void TWI_stop(void);
+void TWI_writeByte(uint8 data);
+uint8 TWI_readByteWithACK(void);
+uint8 TWI_readByteWithNACK(void);
+uint8 TWI_getStatus(void);
+
+#endif /* TWI_H_ */

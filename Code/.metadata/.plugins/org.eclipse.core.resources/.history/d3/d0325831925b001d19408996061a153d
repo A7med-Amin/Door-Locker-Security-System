@@ -1,0 +1,44 @@
+/*
+ * timer1.h
+ *
+ *  Created on: Nov 3, 2022
+ *      Author: Ahmed
+ */
+
+#include"gpio.h"
+#ifndef TIMER1_H_
+#define TIMER1_H_
+
+/*******************************************************************************
+ *                                Definitions                                  *
+ *******************************************************************************/
+
+
+/*******************************************************************************
+ *                                User Defined Data-Types                      *
+ *******************************************************************************/
+/*Pre-scaler*/
+uint8 Timer1_Prescaler;
+/*MODE OF OPERATION*/
+typedef enum{
+
+};
+
+/*CONFIG. Struct*/
+typedef struct {
+uint16 initial_value;
+uint16 compare_value; // it will be used in compare mode only.
+Timer1_Prescaler prescaler;
+Timer1_Mode mode;
+} Timer1_ConfigType;
+
+/*******************************************************************************
+ *                      Functions Prototypes                                   *
+ *******************************************************************************/
+/*
+ * CONFIG. FUNCTION FOR TIMER1
+ */
+
+
+
+#endif /* TIMER1_H_ */

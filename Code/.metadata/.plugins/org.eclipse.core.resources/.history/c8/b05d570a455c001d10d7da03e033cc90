@@ -1,0 +1,38 @@
+/*
+ * twi.h
+ *
+ *  Created on: Nov 4, 2022
+ *      Author: Ahmed
+ */
+
+#ifndef TWI_H_
+#define TWI_H_
+
+#include "std_types.h"
+
+/*******************************************************************************
+ *                          DEFINITIONS                                        *
+ *******************************************************************************/
+
+
+/*******************************************************************************
+ *                      user defined data-types                                *
+ *******************************************************************************/
+/*PRESCALER FOR BAUD-RATE*/
+typedef enum{
+	F_1,F_4,F_16,F_64
+}TWI_BaudRate_Prescaler;
+
+/*CONFIGURATOIN STRUCTURE*/
+typedef struct{
+uint8 slave_address;
+TWI_BaudRate_Prescaler bit_rate;
+}TWI_ConfigType;
+
+/*******************************************************************************
+ *                      Functions Prototypes                                   *
+ *******************************************************************************/
+
+
+
+#endif /* TWI_H_ */

@@ -1,0 +1,59 @@
+/******************************************************************************
+ *
+ * Module: ADC
+ *
+ * File Name: dc_Motor.c
+ *
+ * Created on: Oct 6, 2022
+ *
+ * Description: source file for the ATmega16 ADC driver
+ *
+ * Author: Ahmed
+ *
+ *******************************************************************************/
+#include "dc_Motor.h"
+#include "../MCAL./timer0.h"
+#include "../CONFIG./std_types.h"
+
+/* TIMER0 CONFIG. */
+TIMER0_ConfigType TIMER_Conf={PWM,NON_INVERTING,CLK8};
+
+/*******************************************************************************
+ *                      Functions Definitions                                  *
+ *******************************************************************************/
+
+void DcMotor_Init(void)
+{
+	TIMER0_init(&TIMER_Conf);
+	/*
+	 * PINS CONNECTED TO IN1/IN2 OUPUT PINS
+	 */
+	GPIO_setupPinDirection(DC_MOTOR_IN1_PORT_ID, DC_MOTOR_IN1_PIN_ID, PIN_OUTPUT);
+	GPIO_setupPinDirection(DC_MOTOR_IN2_PORT_ID, DC_MOTOR_IN2_PIN_ID, PIN_OUTPUT);
+	/*
+	 * MAKE MOTOR AT INITIAL STATE AT THE BEGINNING
+	 */
+	DcMotor_Rotate(STOP,0);
+}
+
+void DcMotor_Rotate(DcMotor_State state,uint8 speed)
+{
+	switch(state)
+	{
+	case STOP:
+		GPIO_writePin(DC_MOTOR_IN1_PORT_ID, DC_MOTOR_IN1_PIN_ID, LOGIC_LOW);
+		GPIO_writePin(DC_MOTOR_IN2_PORT_ID, DC_MOTOR_IN2_PIN_ID, LOGIC_LOW);
+		break;
+	case CW:
+		GPIO_writePin(DC_MOTOR_IN1_PORT_ID, DC_MOTOR_IN1_PIN_ID, LOGIC_LOW);
+		GPIO_writePin(DC_MOTOR_IN2_PORT_ID, DC_MOTOR_IN2_PIN_ID, LOGIC_HIGH);
+		break;
+	case A_CW:
+		GPIO_writePin(DC_MOTOR_IN1_PORT_ID, DC_MOTOR_IN1_PIN_ID, LOGIC_HIGH);
+		GPIO_writePin(DC_MOTOR_IN2_PORT_ID, DC_MOTOR_IN2_PIN_ID, LOGIC_LOW);
+		break;
+	}
+
+	/*PWM SIGNAL TO ROTATE MOTOR*/
+	PWM_Timer0_Start(speed);
+}

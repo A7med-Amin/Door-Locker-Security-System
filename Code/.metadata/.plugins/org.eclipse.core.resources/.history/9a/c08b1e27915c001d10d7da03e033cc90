@@ -1,0 +1,106 @@
+#include "uart.h"
+#include "avr/io.h" /* To use the UART Registers */
+#include "common_macros.h" /* To use the macros like SET_BIT */
+
+ ============================================================================
+ *  usart.c
+ *  Date: OCT 10, 2022
+ *  Author: Yousef_Osama
+ *  Description: The Source File of USART Driver
+ ============================================================================
+ */
+/*
+ * Description :
+ * Functional responsible for Initialize the UART device by:
+ * 1. Setup the Frame format like number of data bits, parity bit type and number of stop bits.
+ * 2. Enable the UART.
+ * 3. Setup the UART baud rate.
+ */
+void USART_init(USART_ConfigType *config) {
+	uint16 ubrr_value = 0;
+	SET_BIT(UCSRA, U2X);
+	SET_BIT(UCSRB, RXEN);
+	SET_BIT(UCSRB, TXEN);
+	ubrr_value = (uint16) ((F_CPU / (config->Baud_Rate * 8UL)) - 1);
+	UBRRH = ubrr_value >> 8;
+	UBRRL = ubrr_value;
+	SET_BIT(UCSRC, URSEL);
+	switch (config->Character_Size) {
+	case 5:
+		CLEAR_BIT(UCSRC, UCSZ0);
+		CLEAR_BIT(UCSRC, UCSZ1);
+		CLEAR_BIT(UCSRB, UCSZ2);
+		break;
+	case 6:
+		SET_BIT(UCSRC, UCSZ0);
+		CLEAR_BIT(UCSRC, UCSZ1);
+		CLEAR_BIT(UCSRB, UCSZ2);
+		break;
+	case 7:
+		CLEAR_BIT(UCSRC, UCSZ0);
+		SET_BIT(UCSRC, UCSZ1);
+		CLEAR_BIT(UCSRB, UCSZ2);
+		break;
+	case 8:
+		SET_BIT(UCSRC, UCSZ0);
+		SET_BIT(UCSRC, UCSZ1);
+		CLEAR_BIT(UCSRB, UCSZ2);
+		break;
+	case 9:
+		SET_BIT(UCSRC, UCSZ0);
+		SET_BIT(UCSRC, UCSZ1);
+		SET_BIT(UCSRB, UCSZ2);
+		break;
+	}
+	UCSRC = (UCSRC & 0xcf) | (config->ParityMode << 4);
+	if (config->Stop_Select == BIT_1_STOP_SELECT) {
+		CLEAR_BIT(UCSRC, USBS);
+	} else {
+		SET_BIT(UCSRC, USBS);
+	}
+}
+/*
+ * Description :
+ * Functional responsible for send byte to another UART device.
+ */
+void USART_sendByte(uint8 data) {
+	UDR = data;
+	while (BIT_IS_CLEAR(UCSRA, TXC))
+		;
+	SET_BIT(UCSRA, TXC);
+}
+/*
+ * Description :
+ * Functional responsible for receive byte from another UART device.
+ */
+uint8 USART_recieveByte() {
+	while (BIT_IS_CLEAR(UCSRA, RXC))
+		;
+	return UDR;
+	// it returns the data and clear the flag So U don't need to clear it
+}
+/*
+ * Description :
+ * Send the required string through UART to the other UART device.
+ */
+void USART_sendString(string s) {
+	uint8 i = 0;
+	while (s[i] != '\0') {
+		USART_sendByte(s[i]);
+		i++;
+	}
+}
+/*
+ * Description :
+ * Receive the required string until the '#' symbol through UART from the other UART device.
+ */
+void USART_recieveString(uint8 *Str) {
+	uint8 i = 0;
+	Str[i] = USART_recieveByte();
+	while(Str[i] != '#')
+	{
+		i++;
+		Str[i] = USART_recieveByte();
+	}
+	Str[i] = '\0';
+}

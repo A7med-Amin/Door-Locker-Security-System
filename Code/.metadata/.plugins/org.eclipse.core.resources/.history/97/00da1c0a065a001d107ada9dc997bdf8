@@ -1,0 +1,27 @@
+/*
+ * buzzer.c
+ *
+ *  Created on: Nov 1, 2022
+ *      Author: Ahmed
+ */
+
+#include"buzzer.h"
+#include "common_macros.h"
+
+
+//FUNCTION DEFINITIONS
+void Buzzer_init()
+{
+
+}
+
+void Buzzer_on(void)
+{
+
+}
+
+void Buzzer_off(void)
+{
+
+}
+

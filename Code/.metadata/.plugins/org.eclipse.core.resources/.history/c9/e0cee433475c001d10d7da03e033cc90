@@ -1,0 +1,55 @@
+/*
+ * twi.c
+ *
+ *  Created on: Nov 4, 2022
+ *      Author: Ahmed
+ */
+
+#include "twi.h"
+#include "common_macros.h"
+#include <avr/io.h>
+
+
+ /*******************************************************************************
+  *                      Functions Definitions                                  *
+  *******************************************************************************/
+
+void TWI_init(TWI_ConfigType* config_ptr)
+{
+
+}
+
+void TWI_start(void)
+{
+
+}
+
+void TWI_stop(void)
+{
+
+}
+
+void TWI_writeByte(uint8 data)
+{
+
+}
+
+uint8 TWI_readByteWithACK(void)
+{
+
+}
+
+uint8 TWI_readByteWithNACK(void)
+{
+
+}
+/*
+ * DESC: RETURN STATUS REG FOR I2C
+ * 		 HELPS TO DETECT IF OPERATION (START,STOP,ACK,TRANS,RECEIVE) HEPPENS CORRECTLY OR NOT
+ * */
+uint8 TWI_getStatus(void)
+{
+	/*GET MOST 5 BITS (STATUS) IN TWSR REG.*/
+	uint8 stat=(TWSR&0XF8);
+	return stat;
+}

@@ -1,0 +1,31 @@
+/*
+ * hmiMain.h
+ *
+ *  Created on: Nov 5, 2022
+ *      Author: Ahmed
+ */
+
+#ifndef HMIMAIN_H_
+#define HMIMAIN_H_
+
+
+/*******************************************************************************
+ *                          DEFINITIONS                                        *
+ *******************************************************************************/
+/*ACKNOWLEDGE FOR BOTH ECUS*/
+#define HMI_READY 0x10
+#define CON_READY 0x10
+
+#define DOOR_HOLD 1
+#define DOOR_OPEN 5
+#define DOOR_CLOSE 5
+#define BUZZER_ACTIVE 20
+#define PASS_LENGTH 5
+#define ENTER_KEY 13
+#define KEYPAD_DELAY 500
+#define UART_DELAY 50
+
+
+
+
+#endif /* HMIMAIN_H_ */

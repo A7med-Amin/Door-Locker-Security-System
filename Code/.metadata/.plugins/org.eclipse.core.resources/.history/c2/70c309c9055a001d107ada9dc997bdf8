@@ -1,0 +1,11 @@
+/*
+ * buzzer.c
+ *
+ *  Created on: Nov 1, 2022
+ *      Author: Ahmed
+ */
+
+#include"buzzer.h"
+#include "common_macros.h"
+#include "gpio.h"
+
